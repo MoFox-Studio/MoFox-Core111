@@ -29,7 +29,7 @@ from src.mood.mood_manager import mood_manager
 from src.person_info.person_info import Person, is_person_known
 from src.plugin_system.base.component_types import ActionInfo, EventType
 from src.plugin_system.apis import llm_api
-
+from src.common.schedule_manager import schedule_manager
 
 logger = get_logger("replyer")
 
@@ -66,8 +66,12 @@ def init_prompt():
     # s4u 风格的 prompt 模板
     Prompt(
         """
-{expression_habits_block}{tool_info_block}
-{knowledge_prompt}{memory_block}{relation_info_block}
+你正在一个QQ群里聊天，你需要理解整个群的聊天动态和话题走向，并做出自然的回应。
+{expression_habits_block}
+{tool_info_block}
+{knowledge_prompt}
+{memory_block}
+{relation_info_block}
 {extra_info_block}
 {identity}
 {action_descriptions}
@@ -79,6 +83,7 @@ def init_prompt():
 
 {reply_target_block}
 
+{schedule_block}
 
 你现在的心情是：{mood_state}
 {reply_style}
@@ -771,6 +776,12 @@ class DefaultReplyer:
 
         identity_block = await get_individuality().get_personality_block()
 
+        schedule_block = ""
+        if global_config.schedule.enable:
+            current_activity = schedule_manager.get_current_activity()
+            if current_activity:
+                schedule_block = f"你当前正在：{current_activity}。"
+
         moderation_prompt_block = (
             "请不要输出违法违规内容，不要输出色情，暴力，政治相关内容，如有敏感内容，请规避。"
         )
@@ -807,47 +818,31 @@ class DefaultReplyer:
             message_list_before_now_long, user_id, sender
         )
 
-        if global_config.bot.qq_account == user_id and platform == global_config.bot.platform:
-            return await global_prompt_manager.format_prompt(
-                "replyer_self_prompt",
-                expression_habits_block=expression_habits_block,
-                tool_info_block=tool_info,
-                knowledge_prompt=prompt_info,
-                memory_block=memory_block,
-                relation_info_block=relation_info,
-                extra_info_block=extra_info_block,
-                identity=identity_block,
-                action_descriptions=actions_info,
-                mood_state=mood_prompt,
-                background_dialogue_prompt=background_dialogue_prompt,
-                time_block=time_block,
-                target=target,
-                reason=reply_reason,
-                reply_style=global_config.personality.reply_style,
-                keywords_reaction_prompt=keywords_reaction_prompt,
-                moderation_prompt=moderation_prompt_block,
-            ),selected_expressions
-        else:
-            return await global_prompt_manager.format_prompt(
-                "replyer_prompt",
-                expression_habits_block=expression_habits_block,
-                tool_info_block=tool_info,
-                knowledge_prompt=prompt_info,
-                memory_block=memory_block,
-                relation_info_block=relation_info,
-                extra_info_block=extra_info_block,
-                identity=identity_block,
-                action_descriptions=actions_info,
-                sender_name=sender,
-                mood_state=mood_prompt,
-                background_dialogue_prompt=background_dialogue_prompt,
-                time_block=time_block,
-                core_dialogue_prompt=core_dialogue_prompt,
-                reply_target_block=reply_target_block,
-                reply_style=global_config.personality.reply_style,
-                keywords_reaction_prompt=keywords_reaction_prompt,
-                moderation_prompt=moderation_prompt_block,
-            ),selected_expressions
+        # 使用 s4u 风格的模板
+        template_name = "s4u_style_prompt"
+
+        return await global_prompt_manager.format_prompt(
+            template_name,
+            expression_habits_block=expression_habits_block,
+            tool_info_block=tool_info,
+            knowledge_prompt=prompt_info,
+            memory_block=memory_block,
+            relation_info_block=relation_info,
+            extra_info_block=extra_info_block,
+            identity=identity_block,
+            schedule_block=schedule_block,
+            action_descriptions=action_descriptions,
+            sender_name=sender,
+            mood_state=mood_prompt,
+            background_dialogue_prompt=background_dialogue_prompt,
+            time_block=time_block,
+            core_dialogue_prompt=core_dialogue_prompt,
+            reply_target_block=reply_target_block,
+            message_txt=target,
+            reply_style=global_config.personality.reply_style,
+            keywords_reaction_prompt=keywords_reaction_prompt,
+            moderation_prompt=moderation_prompt_block,
+        )
 
     async def build_prompt_rewrite_context(
         self,
