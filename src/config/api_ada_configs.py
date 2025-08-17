@@ -111,6 +111,12 @@ class ModelTaskConfig(ConfigBase):
     replyer: TaskConfig
     """normal_chat首要回复模型模型配置"""
 
+    replyer_2: TaskConfig
+    """normal_chat次要回复模型配置"""
+
+    maizone : TaskConfig
+    """maizone专用模型"""
+
     emotion: TaskConfig
     """情绪模型配置"""
 
