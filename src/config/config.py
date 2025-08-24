@@ -45,7 +45,8 @@ from src.config.official_configs import (
     PluginsConfig,
     WakeUpSystemConfig,
     MonthlyPlanSystemConfig,
-    CrossContextConfig
+    CrossContextConfig,
+    PermissionConfig
 )
 
 from .api_ada_configs import (
@@ -396,6 +397,7 @@ class Config(ValidatedConfigBase):
     custom_prompt: CustomPromptConfig = Field(..., description="自定义提示配置")
     voice: VoiceConfig = Field(..., description="语音配置")
     schedule: ScheduleConfig = Field(..., description="调度配置")
+    permission: PermissionConfig = Field(..., description="权限配置")
     
     # 有默认值的字段放在后面
     anti_prompt_injection: AntiPromptInjectionConfig = Field(default_factory=lambda: AntiPromptInjectionConfig(), description="反提示注入配置")
