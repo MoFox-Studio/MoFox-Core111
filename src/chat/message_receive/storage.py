@@ -19,7 +19,7 @@ class MessageStorage:
     def _serialize_keywords(keywords) -> str:
         """将关键词列表序列化为JSON字符串"""
         if isinstance(keywords, list):
-            return json.dumps(keywords, ensure_ascii=False)
+            return orjson.dumps(keywords).decode("utf-8")
         return "[]"
     
     @staticmethod
@@ -28,8 +28,8 @@ class MessageStorage:
         if not keywords_str:
             return []
         try:
-            return json.loads(keywords_str)
-        except (json.JSONDecodeError, TypeError):
+            return orjson.loads(keywords_str)
+        except (orjson.JSONDecodeError, TypeError):
             return []
 
     @staticmethod
@@ -64,7 +64,6 @@ class MessageStorage:
                 is_command = False
                 key_words = ""
                 key_words_lite = ""
-                selected_expressions = message.selected_expressions
             else:
                 filtered_display_message = ""
                 interest_value = message.interest_value
@@ -79,8 +78,7 @@ class MessageStorage:
                 # 序列化关键词列表为JSON字符串
                 key_words = MessageStorage._serialize_keywords(message.key_words)
                 key_words_lite = MessageStorage._serialize_keywords(message.key_words_lite)
-                selected_expressions = ""
-                
+
             chat_info_dict = chat_stream.to_dict()
             user_info_dict = message.message_info.user_info.to_dict()  # type: ignore
 
@@ -130,7 +128,6 @@ class MessageStorage:
                 is_command=is_command,
                 key_words=key_words,
                 key_words_lite=key_words_lite,
-                selected_expressions=selected_expressions,
             )
             with get_db_session() as session:
                 session.add(new_message)
