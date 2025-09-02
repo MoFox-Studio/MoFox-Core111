@@ -39,7 +39,7 @@ def init_prompt():
 {identity_block}
 
 {custom_prompt_block}
-{chat_context_description}，以下是具体的聊天内容
+{chat_context_description}，以下是具体的聊天内容，其中[mxxx]是消息id。
 {chat_content_block}
 
 {moderation_prompt}
@@ -202,7 +202,6 @@ class ActionPlanner:
                 action_description=action_info.description,
                 action_parameters=param_text,
                 action_require=require_text,
-                target_prompt=target_prompt,
             )
         return action_options_block
 
@@ -220,6 +219,9 @@ class ActionPlanner:
         Returns:
             找到的原始消息字典，如果未找到则返回None
         """
+        # 检测message_id 是否为纯数字
+        if message_id.isdigit():
+            message_id = f"m{message_id}"
         for item in message_id_list:
             if item.get("id") == message_id:
                 return item.get("message")
@@ -481,8 +483,6 @@ class ActionPlanner:
                 mentioned_bonus = "\n- 有人提到你，或者at你"
 
             if mode == ChatMode.FOCUS:
-                by_what = "聊天内容"
-                target_prompt = '\n    "target_message_id":"触发action的消息id"'
                 no_action_block = f"""重要说明：
 - 'no_reply' 表示只进行不进行回复，等待合适的回复时机
 - 当你刚刚发送了消息，没有人回复时，选择no_reply
@@ -499,8 +499,6 @@ class ActionPlanner:
 }}
 """
             else:  # NORMAL Mode
-                by_what = "聊天内容和用户的最新消息"
-                target_prompt = ""
                 no_action_block = f"""重要说明：
 - 'reply' 表示只进行普通聊天回复，不执行任何额外动作
 - 其他action表示在普通回复的基础上，执行相应的额外动作
@@ -527,7 +525,7 @@ class ActionPlanner:
                 chat_context_description = f"你正在和 {chat_target_name} 私聊"
 
             action_options_block = await self._build_action_options(
-                current_available_actions, mode, target_prompt
+                current_available_actions, mode
             )
 
             moderation_prompt_block = "请不要输出违法违规内容，不要输出色情，暴力，政治相关内容，如有敏感内容，请规避。"

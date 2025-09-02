@@ -739,13 +739,12 @@ class EmojiManager:
             emoji = await self.get_emoji_from_manager(emoji_hash)
             if emoji and emoji.emotion:
                 logger.info(f"[缓存命中] 从内存获取表情包描述: {emoji.emotion}...")
-                return ",".join(emoji.emotion)
+                return emoji.emotion
 
             # 如果内存中没有，从数据库查找
-            self._ensure_db()
             try:
-                emoji_record = Emoji.get_or_none(Emoji.emoji_hash == emoji_hash)
-                if emoji_record and emoji_record.emotion:
+                emoji_record = await self.get_emoji_from_db(emoji_hash)
+                if emoji_record and emoji_record[0].emotion:
                     logger.info(f"[缓存命中] 从数据库获取表情包描述: {emoji_record.emotion[:50]}...")
                     return emoji_record.emotion
             except Exception as e:
@@ -756,7 +755,7 @@ class EmojiManager:
         except Exception as e:
             logger.error(f"获取表情包描述失败 (Hash: {emoji_hash}): {str(e)}")
             return None
-
+        
     async def get_emoji_description_by_hash(self, emoji_hash: str) -> Optional[str]:
         """根据哈希值获取已注册表情包的描述
 
