@@ -123,7 +123,7 @@ class MessageStorage:
                 is_picid=is_picid,
             )
             async with get_db_session() as session:
-                await session.add(new_message)
+                session.add(new_message)
 
         except Exception:
             logger.exception("存储消息失败")
