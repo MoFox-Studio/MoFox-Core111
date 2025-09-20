@@ -43,9 +43,9 @@ def replace_user_references_sync(
             # 检查是否是机器人自己
             if replace_bot_name and user_id == global_config.bot.qq_account:
                 return f"{global_config.bot.nickname}(你)"
-            person = Person(platform=platform, user_id=user_id)
-            return person.person_name or user_id  # type: ignore
-
+            person_id = PersonInfoManager.get_person_id(platform, user_id)
+            return person_info_manager.get_value(person_id, "person_name") or user_id  # type: ignore
+ 
         name_resolver = default_resolver
 
     # 处理回复<aaa:bbb>格式
