@@ -28,7 +28,7 @@ from src.schedule.schedule_manager import schedule_manager
 logger = get_logger("plan_filter")
 
 
-class ChatterPlanFilter:
+class PlanFilter:
     """
     根据 Plan 中的模式和信息，筛选并决定最终的动作。
     """
@@ -45,7 +45,7 @@ class ChatterPlanFilter:
         try:
             prompt, used_message_id_list = await self._build_prompt(plan)
             plan.llm_prompt = prompt
-            logger.info(f"规划器原始提示词: {prompt}")
+            logger.debug(f"墨墨在这里加了日志 -> LLM prompt: {prompt}")
 
             llm_content, _ = await self.planner_llm.generate_response_async(prompt=prompt)
 
@@ -134,7 +134,7 @@ class ChatterPlanFilter:
                 )
 
                 prompt_template = await global_prompt_manager.get_prompt_async("proactive_planner_prompt")
-                actions_before_now = await get_actions_by_timestamp_with_chat(
+                actions_before_now = get_actions_by_timestamp_with_chat(
                     chat_id=plan.chat_id,
                     timestamp_start=time.time() - 3600,
                     timestamp_end=time.time(),
@@ -168,7 +168,7 @@ class ChatterPlanFilter:
                 show_actions=True,
             )
 
-            actions_before_now = await get_actions_by_timestamp_with_chat(
+            actions_before_now = get_actions_by_timestamp_with_chat(
                 chat_id=plan.chat_id,
                 timestamp_start=time.time() - 3600,
                 timestamp_end=time.time(),
@@ -321,7 +321,7 @@ class ChatterPlanFilter:
         interest_scores = {}
 
         try:
-            from src.plugins.built_in.affinity_flow_chatter.interest_scoring import chatter_interest_scoring_system as interest_scoring_system
+            from src.plugins.built_in.affinity_flow_chatter.interest_scoring import chatter_interest_scoring_system
             from src.common.data_models.database_data_model import DatabaseMessages
 
             # 转换消息格式
@@ -348,7 +348,7 @@ class ChatterPlanFilter:
             # 计算兴趣度评分
             if db_messages:
                 bot_nickname = global_config.bot.nickname or "麦麦"
-                scores = await interest_scoring_system.calculate_interest_scores(db_messages, bot_nickname)
+                scores = await chatter_interest_scoring_system.calculate_interest_scores(db_messages, bot_nickname)
 
                 # 构建兴趣度字典
                 for score in scores:
@@ -427,8 +427,7 @@ class ChatterPlanFilter:
             return non_no_actions
         return action_list[:1] if action_list else []
 
-    @staticmethod
-    async def _get_long_term_memory_context() -> str:
+    async def _get_long_term_memory_context(self) -> str:
         try:
             now = datetime.now()
             keywords = ["今天", "日程", "计划"]
@@ -452,8 +451,7 @@ class ChatterPlanFilter:
             logger.error(f"获取长期记忆时出错: {e}")
             return "回忆时出现了一些问题。"
 
-    @staticmethod
-    async def _build_action_options(current_available_actions: Dict[str, ActionInfo]) -> str:
+    async def _build_action_options(self, current_available_actions: Dict[str, ActionInfo]) -> str:
         action_options_block = ""
         for action_name, action_info in current_available_actions.items():
             param_text = ""
@@ -515,8 +513,7 @@ class ChatterPlanFilter:
 
         return None
 
-    @staticmethod
-    def _get_latest_message(message_id_list: list) -> Optional[Dict[str, Any]]:
+    def _get_latest_message(self, message_id_list: list) -> Optional[Dict[str, Any]]:
         if not message_id_list:
             return None
         return message_id_list[-1].get("message")
