@@ -3,6 +3,7 @@ import asyncio
 import signal
 import sys
 from functools import partial
+import traceback
 from typing import Dict, Any
 
 from maim_message import MessageServer
