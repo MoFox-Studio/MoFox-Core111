@@ -712,7 +712,7 @@ class DefaultReplyer:
             if chat_stream:
                 stream_context = chat_stream.context_manager
                 # 使用真正的已读和未读消息
-                read_messages = stream_context.history_messages  # 已读消息
+                read_messages = stream_context.context.history_messages  # 已读消息
                 unread_messages = stream_context.get_unread_messages()  # 未读消息
 
                 # 构建已读历史消息 prompt
@@ -728,7 +728,7 @@ class DefaultReplyer:
                 else:
                     # 如果没有已读消息，则从数据库加载最近的上下文
                     logger.info("暂无已读历史消息，正在从数据库加载上下文...")
-                    fallback_messages = get_raw_msg_before_timestamp_with_chat(
+                    fallback_messages = await get_raw_msg_before_timestamp_with_chat(
                         chat_id=chat_id,
                         timestamp=time.time(),
                         limit=global_config.chat.max_context_size,

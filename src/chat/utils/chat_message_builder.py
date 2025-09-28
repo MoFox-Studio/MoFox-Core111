@@ -12,6 +12,8 @@ from src.person_info.person_info import PersonInfoManager, get_person_info_manag
 from src.chat.utils.utils import translate_timestamp_to_human_readable, assign_message_ids
 from src.common.database.sqlalchemy_database_api import get_db_session
 from sqlalchemy import select, and_
+from src.common.logger import get_logger
+logger = get_logger("chat_message_builder")
 
 install(extra_lines=3)
 
@@ -830,10 +832,11 @@ async def build_pic_mapping_info(pic_id_mapping: Dict[str, str]) -> str:
             async with get_db_session() as session:
                 result = await session.execute(select(Images).where(Images.image_id == pic_id))
                 image = result.scalar_one_or_none()
-                if image and image.description:  # type: ignore
+                if image and hasattr(image, 'description') and image.description:
                     description = image.description
-        except Exception:
+        except Exception as e:
             # 如果查询失败，保持默认描述
+            logger.debug(f"[chat_message_builder] 查询图片描述失败: {e}")
             pass
 
         mapping_lines.append(f"[{display_name}] 的内容：{description}")
