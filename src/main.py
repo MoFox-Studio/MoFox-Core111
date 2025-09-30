@@ -27,12 +27,13 @@ from src.individuality.individuality import get_individuality, Individuality
 from src.manager.async_task_manager import async_task_manager
 from src.mood.mood_manager import mood_manager
 from src.plugin_system.base.component_types import EventType
-from src.plugin_system.core.event_manager import event_manager
-from src.plugin_system.core.plugin_hot_reload import hot_reload_manager
-# 导入新的插件管理器和热重载管理器
+# from src.api.main import start_api_server
+
+# 导入新的插件管理器
 from src.plugin_system.core.plugin_manager import plugin_manager
-from src.schedule.monthly_plan_manager import monthly_plan_manager
-from src.schedule.schedule_manager import schedule_manager
+
+# 导入消息API和traceback模块
+from src.common.message import get_global_api
 
 # 导入增强记忆系统管理器
 from src.chat.memory_system.enhanced_memory_manager import enhanced_memory_manager
@@ -117,13 +118,7 @@ class MainSystem:
         except Exception as e:
             logger.error(f"停止消息重组器时出错: {e}")
 
-        try:
-            # 停止插件热重载系统
-            hot_reload_manager.stop()
-            logger.info("🛑 插件热重载系统已停止")
-        except Exception as e:
-            logger.error(f"停止热重载系统时出错: {e}")
-
+  
         try:
             # 停止增强记忆系统
             if global_config.memory.enable_memory:
@@ -230,9 +225,7 @@ MoFox_Bot(第三方修改版)
         # 处理所有缓存的事件订阅（插件加载完成后）
         event_manager.process_all_pending_subscriptions()
 
-        # 启动插件热重载系统
-        hot_reload_manager.start()
-
+  
         # 初始化表情管理器
         get_emoji_manager().initialize()
         logger.info("表情包管理器初始化成功")
