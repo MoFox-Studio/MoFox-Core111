@@ -240,7 +240,7 @@ class ExpressionLearner:
 
                 if new_count <= 0.01:
                     # 如果count太小，删除这个表达方式
-                    session.delete(expr)
+                    await session.delete(expr)
                     await session.commit()
                     deleted_count += 1
                 else:
@@ -502,16 +502,29 @@ class ExpressionLearnerManager:
             return
 
         if os.path.exists(done_flag):
-            logger.info("表达方式JSON已迁移，无需重复迁移。")
-        else:
-            logger.info("开始迁移表达方式JSON到数据库...")
-            migrated_count = 0
+            logger.debug("表达方式JSON已迁移，无需重复迁移。")
+            return
 
-            for type in ["learnt_style", "learnt_grammar"]:
-                type_str = "style" if type == "learnt_style" else "grammar"
-                type_dir = os.path.join(base_dir, type)
-                if not os.path.exists(type_dir):
-                    logger.debug(f"目录不存在，跳过: {type_dir}")
+        logger.info("开始迁移表达方式JSON到数据库...")
+        migrated_count = 0
+
+        for type in ["learnt_style", "learnt_grammar"]:
+            type_str = "style" if type == "learnt_style" else "grammar"
+            type_dir = os.path.join(base_dir, type)
+            if not os.path.exists(type_dir):
+                logger.debug(f"目录不存在，跳过: {type_dir}")
+                continue
+
+            try:
+                chat_ids = os.listdir(type_dir)
+                logger.debug(f"在 {type_dir} 中找到 {len(chat_ids)} 个聊天ID目录")
+            except Exception as e:
+                logger.error(f"读取目录失败 {type_dir}: {e}")
+                continue
+
+            for chat_id in chat_ids:
+                expr_file = os.path.join(type_dir, chat_id, "expressions.json")
+                if not os.path.exists(expr_file):
                     continue
 
                 try:
