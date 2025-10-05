@@ -1408,7 +1408,7 @@ class MemorySystem:
         predicate_part = (memory.content.predicate or "").strip()
 
         obj = memory.content.object
-        if isinstance(obj, (dict, list)):
+        if isinstance(obj, dict | list):
             obj_part = orjson.dumps(obj, option=orjson.OPT_SORT_KEYS).decode("utf-8")
         else:
             obj_part = str(obj).strip()
