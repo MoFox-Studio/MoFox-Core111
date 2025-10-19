@@ -24,6 +24,81 @@ install(extra_lines=3)
 logger = get_logger("unified_prompt")
 
 
+@dataclass
+class PromptParameters:
+    """统一提示词参数系统"""
+
+    # 基础参数
+    chat_id: str = ""
+    is_group_chat: bool = False
+    sender: str = ""
+    target: str = ""
+    reply_to: str = ""
+    extra_info: str = ""
+    prompt_mode: Literal["s4u", "normal", "minimal"] = "s4u"
+    bot_name: str = ""
+    bot_nickname: str = ""
+
+    # 功能开关
+    enable_tool: bool = True
+    enable_memory: bool = True
+    enable_expression: bool = True
+    enable_relation: bool = True
+    enable_cross_context: bool = True
+    enable_knowledge: bool = True
+
+    # 性能控制
+    max_context_messages: int = 50
+
+    # 调试选项
+    debug_mode: bool = False
+
+    # 聊天历史和上下文
+    chat_target_info: dict[str, Any] | None = None
+    message_list_before_now_long: list[dict[str, Any]] = field(default_factory=list)
+    message_list_before_short: list[dict[str, Any]] = field(default_factory=list)
+    chat_talking_prompt_short: str = ""
+    target_user_info: dict[str, Any] | None = None
+
+    # 已构建的内容块
+    expression_habits_block: str = ""
+    relation_info_block: str = ""
+    memory_block: str = ""
+    tool_info_block: str = ""
+    knowledge_prompt: str = ""
+    cross_context_block: str = ""
+    notice_block: str = ""
+
+    # 其他内容块
+    keywords_reaction_prompt: str = ""
+    extra_info_block: str = ""
+    time_block: str = ""
+    identity_block: str = ""
+    schedule_block: str = ""
+    moderation_prompt_block: str = ""
+    safety_guidelines_block: str = ""
+    reply_target_block: str = ""
+    mood_prompt: str = ""
+    action_descriptions: str = ""
+
+    # 可用动作信息
+    available_actions: dict[str, Any] | None = None
+
+    # 动态生成的聊天场景提示
+    chat_scene: str = ""
+
+    def validate(self) -> list[str]:
+        """参数验证"""
+        errors = []
+        if not self.chat_id:
+            errors.append("chat_id不能为空")
+        if self.prompt_mode not in ["s4u", "normal", "minimal"]:
+            errors.append("prompt_mode必须是's4u'、'normal'或'minimal'")
+        if self.max_context_messages <= 0:
+            errors.append("max_context_messages必须大于0")
+        return errors
+
+
 class PromptContext:
     """提示词上下文管理器"""
 
@@ -309,6 +384,8 @@ class Prompt:
                 pre_built_params["knowledge_prompt"] = self.parameters.knowledge_prompt
             if self.parameters.cross_context_block:
                 pre_built_params["cross_context_block"] = self.parameters.cross_context_block
+            if self.parameters.notice_block:
+                pre_built_params["notice_block"] = self.parameters.notice_block
 
             # 根据参数确定要构建的项
             if self.parameters.enable_expression and not pre_built_params.get("expression_habits_block"):
@@ -805,6 +882,7 @@ class Prompt:
             "relation_info_block": context_data.get("relation_info_block", ""),
             "extra_info_block": self.parameters.extra_info_block or context_data.get("extra_info_block", ""),
             "cross_context_block": context_data.get("cross_context_block", ""),
+            "notice_block": self.parameters.notice_block or context_data.get("notice_block", ""),
             "identity": self.parameters.identity_block or context_data.get("identity", ""),
             "action_descriptions": self.parameters.action_descriptions or context_data.get("action_descriptions", ""),
             "sender_name": self.parameters.sender or "未知用户",
@@ -834,6 +912,7 @@ class Prompt:
             "relation_info_block": context_data.get("relation_info_block", ""),
             "extra_info_block": self.parameters.extra_info_block or context_data.get("extra_info_block", ""),
             "cross_context_block": context_data.get("cross_context_block", ""),
+            "notice_block": self.parameters.notice_block or context_data.get("notice_block", ""),
             "identity": self.parameters.identity_block or context_data.get("identity", ""),
             "action_descriptions": self.parameters.action_descriptions or context_data.get("action_descriptions", ""),
             "schedule_block": self.parameters.schedule_block or context_data.get("schedule_block", ""),

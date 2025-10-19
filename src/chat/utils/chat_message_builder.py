@@ -1009,6 +1009,9 @@ async def build_readable_messages(
         return ""
 
     copy_messages = [msg.copy() for msg in messages]
+    
+    if not copy_messages:
+        return ""
 
     if show_actions and copy_messages:
         # 获取所有消息的时间范围
