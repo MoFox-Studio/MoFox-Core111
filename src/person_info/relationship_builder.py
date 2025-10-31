@@ -401,9 +401,9 @@ class RelationshipBuilder:
         for person_id in users_to_build_relationship:
             segments = self.person_engaged_cache[person_id]
             # 异步执行关系构建
-            person = Person(person_id=person_id)
-            if person.is_known: 
-                asyncio.create_task(self.update_impression_on_segments(person_id, self.chat_id, segments))
+            import asyncio
+
+            asyncio.create_task(self.update_impression_on_segments(person_id, self.chat_id, segments))  # noqa: RUF006
             # 移除已处理的用户缓存
             del self.person_engaged_cache[person_id]
             self._save_cache()
