@@ -275,8 +275,20 @@ class MessageManager:
                     inactive_streams.append(stream_id)
             for stream_id in inactive_streams:
                 try:
+                    # 在使用之前重新从 chat_manager 中获取 chat_stream，避免引用未定义或过期的变量
+                    chat_stream = chat_manager.streams.get(stream_id)
+                    if not chat_stream:
+                        logger.debug(f"聊天流 {stream_id} 在清理时已不存在，跳过")
+                        continue
+
                     await chat_stream.context_manager.clear_context()
-                    del chat_manager.streams[stream_id]
+
+                    # 安全删除流（若已被其他地方删除则捕获）
+                    try:
+                        del chat_manager.streams[stream_id]
+                    except KeyError:
+                        logger.debug(f"删除聊天流 {stream_id} 时未找到，可能已被移除")
+
                     logger.info(f"清理不活跃聊天流: {stream_id}")
                 except Exception as e:
                     logger.error(f"清理聊天流 {stream_id} 失败: {e}")
@@ -339,16 +351,21 @@ class MessageManager:
             if random.random() < interruption_probability:
                 logger.info(f"聊天流 {chat_stream.stream_id} 触发消息打断，打断概率: {interruption_probability:.2f}")
 
-                # 修复：取消所有任务（包括多重回复）
-                cancelled_count = self.chatter_manager.cancel_all_stream_tasks(chat_stream.stream_id)
-
-                if cancelled_count > 0:
-                    logger.info(f"消息打断成功取消 {cancelled_count} 个任务: {chat_stream.stream_id}")
-
-                    # 修复：打断后，将被打断的消息标记为已读，防止重复处理
-                    await self.clear_all_unread_messages(chat_stream.stream_id)
-                else:
-                    logger.warning(f"消息打断未能取消任何任务: {chat_stream.stream_id}")
+                # 取消 stream_loop_task，子任务会通过 try-catch 自动取消
+                try:
+                    stream_loop_task.cancel()
+                    logger.info(f"已发送取消信号到流循环任务: {chat_stream.stream_id}")
+                    
+                    # 等待任务真正结束（设置超时避免死锁）
+                    try:
+                        await asyncio.wait_for(stream_loop_task, timeout=2.0)
+                        logger.info(f"流循环任务已完全结束: {chat_stream.stream_id}")
+                    except asyncio.TimeoutError:
+                        logger.warning(f"等待流循环任务结束超时: {chat_stream.stream_id}")
+                    except asyncio.CancelledError:
+                        logger.info(f"流循环任务已被取消: {chat_stream.stream_id}")
+                except Exception as e:
+                    logger.warning(f"取消流循环任务失败: {chat_stream.stream_id} - {e}")
 
                 # 增加打断计数
                 await context.increment_interruption_count()
