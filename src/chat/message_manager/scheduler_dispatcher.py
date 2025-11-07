@@ -32,13 +32,10 @@ class SchedulerDispatcher:
     def __init__(self):
         # 追踪每个流的 schedule_id
         self.stream_schedules: dict[str, str] = {}  # stream_id -> schedule_id
-
-        # 用于保护 schedule 创建/删除的锁，避免竞态条件
-        self.schedule_locks: dict[str, asyncio.Lock] = {}  # stream_id -> Lock
-
+     
         # Chatter 管理器
         self.chatter_manager: ChatterManager | None = None
-
+        
         # 统计信息
         self.stats = {
             "total_schedules_created": 0,
@@ -84,12 +81,6 @@ class SchedulerDispatcher:
         """设置 Chatter 管理器"""
         self.chatter_manager = chatter_manager
         logger.debug(f"设置 Chatter 管理器: {chatter_manager.__class__.__name__}")
-
-    def _get_schedule_lock(self, stream_id: str) -> asyncio.Lock:
-        """获取流的 schedule 锁"""
-        if stream_id not in self.schedule_locks:
-            self.schedule_locks[stream_id] = asyncio.Lock()
-        return self.schedule_locks[stream_id]
 
     async def on_message_received(self, stream_id: str) -> None:
         """消息接收时的处理逻辑
