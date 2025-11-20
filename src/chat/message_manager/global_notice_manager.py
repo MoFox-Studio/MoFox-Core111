@@ -8,7 +8,7 @@ import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, List, Optional
 
 from src.common.data_models.database_data_model import DatabaseMessages
 from src.common.logger import get_logger
