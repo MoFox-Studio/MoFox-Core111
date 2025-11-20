@@ -6,7 +6,7 @@
 
 import asyncio
 import time
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List
 
 from src.chat.energy_system import energy_manager
 from src.common.data_models.database_data_model import DatabaseMessages
@@ -72,7 +72,7 @@ class SingleStreamContextManager:
                 logger.debug(f"为StreamContext {self.stream_id} 启用缓存系统")
 
             # 先计算兴趣值（需要在缓存前计算）
-            await self._calculate_message_interest(message)
+            interest_value = await self._calculate_message_interest(message)
             message.is_read = False
 
             # 使用StreamContext的智能缓存功能
@@ -114,9 +114,12 @@ class SingleStreamContextManager:
             bool: 是否成功更新
         """
         try:
-            # 直接在未读消息中查找并更新（统一转字符串比较）
+            # 统一转字符串比较
+            message_id_str = str(message_id)
+
+            # 在未读消息中查找
             for message in self.context.unread_messages:
-                if str(message.message_id) == str(message_id):
+                if str(message.message_id) == message_id_str:
                     if "interest_value" in updates:
                         message.interest_value = updates["interest_value"]
                     if "actions" in updates:
@@ -125,9 +128,9 @@ class SingleStreamContextManager:
                         message.should_reply = updates["should_reply"]
                     break
 
-            # 在历史消息中查找并更新（统一转字符串比较）
+            # 在历史消息中查找
             for message in self.context.history_messages:
-                if str(message.message_id) == str(message_id):
+                if str(message.message_id) == message_id_str:
                     if "interest_value" in updates:
                         message.interest_value = updates["interest_value"]
                     if "actions" in updates:
@@ -157,10 +160,8 @@ class SingleStreamContextManager:
             if include_unread:
                 messages.extend(self.context.get_unread_messages())
 
-            if limit:
-                messages.extend(self.context.get_history_messages(limit=limit))
-            else:
-                messages.extend(self.context.get_history_messages())
+            history_messages = self.context.get_history_messages(limit=limit)
+            messages.extend(history_messages)
 
             # 按时间排序
             messages.sort(key=lambda msg: getattr(msg, "time", 0))
@@ -203,23 +204,13 @@ class SingleStreamContextManager:
             return marked_count > 0
 
         except Exception as e:
-            logger.error(f"标记消息已读失败 {self.stream_id}: {e}", exc_info=True)
+            logger(f"标记消息已读失败 {self.stream_id}: {e}", exc_info=True)
             return False
 
     async def clear_context(self) -> bool:
         """清空上下文"""
         try:
-            if hasattr(self.context, "unread_messages"):
-                self.context.unread_messages.clear()
-            if hasattr(self.context, "history_messages"):
-                self.context.history_messages.clear()
-            reset_attrs = ["interruption_count", "afc_threshold_adjustment", "last_check_time"]
-            for attr in reset_attrs:
-                if hasattr(self.context, attr):
-                    if attr in ["interruption_count", "afc_threshold_adjustment"]:
-                        setattr(self.context, attr, 0)
-                    else:
-                        setattr(self.context, attr, time.time())
+            self._clear_context_attributes()
             await self._update_stream_energy()
             logger.debug(f"清空单流上下文: {self.stream_id}")
             return True
@@ -304,7 +295,7 @@ class SingleStreamContextManager:
                     return False
 
             # 检查消息ID唯一性
-            all_messages = getattr(self.context, "unread_messages", []) + getattr(self.context, "history_messages", [])
+            all_messages = getattr(self.context "unread_messages", []) + getattr(self.context, "history_messages", [])
             message_ids = [msg.message_id for msg in all_messages if hasattr(msg, "message_id")]
             if len(message_ids) != len(set(message_ids)):
                 logger.warning(f"上下文中存在重复消息ID: {self.stream_id}")
@@ -425,19 +416,7 @@ class SingleStreamContextManager:
     async def clear_context_async(self) -> bool:
         """异步实现的 clear_context：清空消息并 await 能量重算。"""
         try:
-            if hasattr(self.context, "unread_messages"):
-                self.context.unread_messages.clear()
-            if hasattr(self.context, "history_messages"):
-                self.context.history_messages.clear()
-
-            reset_attrs = ["interruption_count", "afc_threshold_adjustment", "last_check_time"]
-            for attr in reset_attrs:
-                if hasattr(self.context, attr):
-                    if attr in ["interruption_count", "afc_threshold_adjustment"]:
-                        setattr(self.context, attr, 0)
-                    else:
-                        setattr(self.context, attr, time.time())
-
+            self._clear_context_attributes()
             await self._update_stream_energy()
             logger.info(f"清空单流上下文(异步): {self.stream_id}")
             return True
@@ -473,3 +452,18 @@ class SingleStreamContextManager:
 
         except Exception as e:
             logger.error(f"更新单流能量失败 {self.stream_id}: {e}")
+
+    def _clear_context_attributes(self):
+        """清空上下文属性"""
+        if hasattr(self.context, "unread_messages"):
+            self.context.unread_messages.clear()
+        if hasattr(self.context, "history_messages"):
+            self.context.history_messages.clear()
+
+        reset_attrs = ["interruption_count", "afc_threshold_adjustment", "last_check_time"]
+        for attr in reset_attrs:
+            if hasattr(self.context, attr):
+                if attr in ["interruption_count", "afc_threshold_adjustment"]:
+                    setattr(self.context, attr, 0)
+                else:
+                    setattr(self.context, attr, time.time())
